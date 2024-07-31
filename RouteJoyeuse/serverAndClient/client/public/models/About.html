@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js Scene with Grid Plane</title>
+    <style>
+        body {
+            margin: 0;
+        }
+
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Initialize scene, camera, and renderer
+        const scene = new THREE.Scene();
+
+        // Add fog to the scene
+        scene.fog = new THREE.Fog(0x000000, 50, 200);
+
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // Add directional light
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 2);
+        directionalLight.position.set(0, 100, 100);
+        scene.add(directionalLight);
+
+        // Create grid texture
+        const size = 1024;
+        const divisions = 50;
+        const gridCanvas = document.createElement('canvas');
+        gridCanvas.width = size;
+        gridCanvas.height = size;
+        const context = gridCanvas.getContext('2d');
+
+        // Create radial gradient for grid
+        const gradient = context.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+
+        context.fillStyle = gradient;
+        context.fillRect(0, 0, size, size);
+
+        context.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+        context.lineWidth = 1;
+
+        for (let i = 0; i <= divisions; i++) {
+            const position = (size / divisions) * i;
+            context.beginPath();
+            context.moveTo(position, 0);
+            context.lineTo(position, size);
+            context.stroke();
+            context.beginPath();
+            context.moveTo(0, position);
+            context.lineTo(size, position);
+            context.stroke();
+        }
+
+        const gridTexture = new THREE.CanvasTexture(gridCanvas);
+
+        // Create grid plane with material that receives light
+        const gridPlaneGeometry = new THREE.PlaneGeometry(700, 700);
+        const gridMaterial = new THREE.MeshStandardMaterial({ map: gridTexture, transparent: true });
+        const grid = new THREE.Mesh(gridPlaneGeometry, gridMaterial);
+
+        grid.rotation.x = -Math.PI / 10;
+        grid.rotation.y = 4 * Math.PI / 10;
+        grid.position.y = 0;
+        scene.add(grid);
+
+        // Create vertical plane with gradient material
+        const planeGeometry = new THREE.PlaneGeometry(50, 50);
+        const planeMaterial = new THREE.ShaderMaterial({
+            uniforms: {
+                color1: { value: new THREE.Color(0x000000) },
+                color2: { value: new THREE.Color(0xffffff) }
+            },
+            vertexShader: `
+                varying vec2 vUv;
+                void main() {
+                    vUv = uv;
+                    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                }
+            `,
+            fragmentShader: `
+                uniform vec3 color1;
+                uniform vec3 color2;
+                varying vec2 vUv;
+                void main() {
+                    gl_FragColor = vec4(mix(color1, color2, vUv.y), 1.0);
+                }
+            `,
+            side: THREE.DoubleSide
+        });
+
+        // Set camera position
+        camera.position.set(100, 0, 50);
+        camera.lookAt(new THREE.Vector3(0, 0, 0));
+
+
+        renderer.render(scene, camera);
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            renderer.setSize(width, height);
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+        });
+    </script>
+</body>
+
+</html>

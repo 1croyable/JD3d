@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Three.js GLTF Loader Example</title>
+    <style>
+        body {
+            margin: 0;
+        }
+
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script>
+        // Basic Three.js setup
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+        directionalLight.position.set(1, 1, 1).normalize();
+        scene.add(directionalLight);
+
+        // Load the GLTF model
+        const loader = new THREE.GLTFLoader();
+        loader.load('../models/the_hand/scene.gltf', function (gltf) {
+            const model = gltf.scene;
+
+            model.rotation.y = Math.PI;
+            model.rotation.x = Math.PI * 8 / 7;
+
+            scene.add(model);
+
+            const animations = gltf.animations;
+            if (animations && animations.length > 1) {
+                const mixer = new THREE.AnimationMixer(model);
+                const action = mixer.clipAction(animations[1]);
+                action.setLoop(THREE.LoopOnce);
+                action.clampWhenFinished = true;
+                action.play();
+
+                // Animate the model
+                const clock = new THREE.Clock();
+                function animate() {
+                    requestAnimationFrame(animate);
+                    mixer.update(clock.getDelta());
+                    renderer.render(scene, camera);
+                }
+                animate();
+            }
+        }, undefined, function (error) {
+            console.error(error);
+        });
+
+        camera.position.z = 1.5;
+        camera.position.y = 0.2;
+
+        // Resize handling
+        window.addEventListener('resize', function () {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+
+</html>
